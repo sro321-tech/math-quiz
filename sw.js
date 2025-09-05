@@ -1,23 +1,21 @@
-const CACHE = 'math-quiz-v1';
-const toCache = [
-  '.',
-  'index.html',
-  'manifest.json'
-  // add 'icon-192.png','icon-512.png' if you include them
-];
-
-self.addEventListener("install", (e) => {
-  e.waitUntil(
+self.addEventListener("install", event => {
+  event.waitUntil(
     caches.open("math-quiz-cache").then((cache) => {
-      return cache.addAll(["/", "/index.html", "/style.css", "/script.js"]);
+      return cache.addAll([
+        "./",
+        "./index.html",
+        "./manifest.json",
+        "./logo-192.png",
+        "./logo-512.png"
+        ]);
     })
   );
 });
 
-self.addEventListener("fetch", (e) => {
-  e.respondWith(
-    caches.match(e.request).then((response) => {
-      return response || fetch(e.request);
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
     })
   );
 });
