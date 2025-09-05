@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" 
+  content="#0d1117">
+  <meta name="viewport"
+    content="width=device-width,
+    initial-scale=1" />
   <title>Quick Math Quiz</title>
   <link rel="manifest" href="manifest.json">
   <style>
@@ -353,6 +357,10 @@ if ('serviceWorker' in navigator) {
 /* Start: show setup screen */
 show('setup');
 updateScoreUI();
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
 </script>
 </body>
 </html>
