@@ -6,14 +6,18 @@ const toCache = [
   // add 'icon-192.png','icon-512.png' if you include them
 ];
 
-self.addEventListener('install', (e) => {
+self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(toCache))
+    caches.open("math-quiz-cache").then((cache) => {
+      return cache.addAll(["/", "/index.html", "/style.css", "/script.js"]);
+    })
   );
 });
 
-self.addEventListener('fetch', (e) => {
+self.addEventListener("fetch", (e) => {
   e.respondWith(
-    caches.match(e.request).then(resp => resp || fetch(e.request))
+    caches.match(e.request).then((response) => {
+      return response || fetch(e.request);
+    })
   );
 });
