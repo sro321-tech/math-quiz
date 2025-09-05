@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quick Math Quiz</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* Simple responsive styling */
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;color-scheme:dark}
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{margin:0;background:linear-gradient(180deg,#071021 0%, #071827 100%);color:#e6eef6;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+    .card{width:100%;max-width:760px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));padding:18px;border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.7)}
+    h1{margin:0 0 8px;font-size:20px}
+    p.lead{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    label{font-size:13px;color:var(--muted)}
+    input[type="text"], input[type="number"], select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;min-width:0}
+    button{background:var(--accent);border:none;padding:10px 12px;border-radius:10px;color:#022;cursor:pointer;font-weight:600}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .center{display:flex;gap:8px;align-items:center}
+    .question{font-size:28px;margin:18px 0}
+    .small{font-size:13px;color:var(--muted)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .leaderboard{margin-top:12px;background:rgba(255,255,255,0.02);padding:12px;border-radius:8px}
+    @media (max-width:520px){ .question{font-size:22px} button{flex:1} }
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <h1>Quick Math Quiz</h1>
+    <p class="lead">Fast, lightweight math quiz. Choose difficulty, try a timed round, save your score and view the leaderboard.</p>
+
+    <!-- Configuration / Start screen -->
+    <div id="setup">
+      <div class="row">
+        <div style="flex:1">
+          <label>Your name (will be saved with score)</label>
+          <input id="playerName" type="text" placeholder="Type a display name (optional)" />
+        </div>
+        <div style="width:140px">
+          <label>Difficulty</label>
+          <select id="difficulty">
+            <option value="easy">Easy (1–10)</option>
+            <option value="medium">Medium (1–50)</option>
+            <option value="hard">Hard (1–200)</option>
+          </select>
+        </div>
+        <div style="width:140px">
+          <label>Operation</label>
+          <select id="operation">
+            <option value="mixed">Mixed (+ - × ÷)</option>
+            <option value="+">Addition (+)</option>
+            <option value="-">Subtraction (-)</option>
+            <option value="*">Multiplication (×)</option>
+            <option value="/">Division (÷)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;align-items:center">
+        <div>
+          <label>Timer per question (seconds)</label>
+          <input id="qtime" type="number" min="0" value="15" />
+          <div class="small">Set 0 for no timer</div>
+        </div>
+        <div style="margin-left:auto">
+          <label>Questions</label>
+          <select id="qcount">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="unlimited">Unlimited</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:14px" class="actions">
+        <button id="startBtn">Start Quiz</button>
+        <button id="viewLb" class="btn-ghost">View Leaderboard</button>
+        <button id="installBtn" class="btn-ghost" style="display:none">Install (PWA)</button>
+      </div>
+    </div>
+
+    <!-- Quiz area -->
+    <div id="quiz" style="display:none">
+      <div class="center" style="justify-content:space-between">
+        <div>
+          <div class="small">Score: <span id="score">0</span> • Correct: <span id="correct">0</span>/<span id="asked">0</span></div>
+          <div class="small">Time left: <span id="timeLeft">—</span></div>
+        </div>
+        <div>
+          <button id="endNow" class="btn-ghost">End Round</button>
+        </div>
+      </div>
+
+      <div class="question" id="questionText">Question appears here</div>
+
+      <div class="row" style="margin-top:8px;align-items:center">
+        <input id="answerInput" type="number" placeholder="Type your answer" />
+        <button id="submitAnswer">Submit</button>
+        <button id="skipBtn" class="btn-ghost">Skip</button>
+      </div>
+
+      <div id="feedback" class="small" style="margin-top:8px;color:var(--muted)"></div>
+    </div>
+
+    <!-- End screen / Save score -->
+    <div id="end" style="display:none; margin-top:12px">
+      <h3>Round finished</h3>
+      <div class="small">Final score: <span id="finalScore">0</span> • Correct: <span id="finalCorrect">0</span>/<span id="finalAsked">0</span></div>
+      <div style="margin-top:10px" class="actions">
+        <button id="saveScore">Save score</button>
+        <button id="playAgain" class="btn-ghost">Play again</button>
+        <button id="shareScore" class="btn-ghost">Share score</button>
+      </div>
+      <div id="afterSave" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="leaderboard" style="display:none" class="leaderboard">
+      <h3>Leaderboard (Top 10)</h3>
+      <ol id="lbList" style="padding-left:18px;margin:8px 0"></ol>
+      <div style="margin-top:8px" class="actions">
+        <button id="clearLb" class="btn-ghost">Clear Leaderboard</button>
+        <button id="backBtn" class="btn-ghost">Back</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px" class="small">Made with ❤️ — share to challenge friends!</div>
+
+    <!-- Placeholder for ads: add AdSense code here after approval -->
+    <!-- Example (do not add until approved):
+    <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXXXXXX" data-ad-slot="YYYYYYYYY" data-ad-format="auto"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    -->
+  </div>
+
+<script>
+/* --- Simple Math Quiz JavaScript --- */
+/* State */
+let state = {
+  name: '',
+  difficulty: 'easy',
+  operation: 'mixed',
+  qtime: 15,
+  qcount: '10',
+  score: 0,
+  correct: 0,
+  asked: 0,
+  currentQ: null,
+  timer: null,
+  timeLeft: 0,
+  roundsPlayed: 0
+};
+
+/* Utilities */
+function $(id){return document.getElementById(id)}
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a }
+
+/* Generate a question object {text, answer} */
+function generateQuestion(difficulty, operation) {
+  let max = {easy:10, medium:50, hard:200}[difficulty] || 10;
+  let a = randInt(1, max);
+  let b = randInt(1, max);
+  let op = operation;
+  if (operation === 'mixed') {
+    const ops = ['+','-','*','/'];
+    op = ops[randInt(0, ops.length-1)];
+  }
+  // Make division produce integer results often:
+  if (op === '/') {
+    // Make 'a' a multiple of b
+    b = randInt(1, Math.max(1, Math.floor(max/2)));
+    let mult = randInt(1, Math.max(1, Math.floor(max/b)));
+    a = b * mult;
+  }
+  // Fix subtraction to avoid negatives
+  if (op === '-' && a < b) [a,b] = [b,a];
+
+  let text = `${a} ${op === '*' ? '×' : op === '/' ? '÷' : op} ${b}`;
+  let answer;
+  if (op === '+') answer = a + b;
+  else if (op === '-') answer = a - b;
+  else if (op === '*') answer = a * b;
+  else if (op === '/') answer = a / b;
+  return {text, answer};
+}
+
+/* UI helpers */
+function show(id){ $('setup').style.display='none'; $('quiz').style.display='none'; $('end').style.display='none'; $('leaderboard').style.display='none'; $(id).style.display='block'; }
+function updateScoreUI(){ $('score').textContent = state.score; $('correct').textContent = state.correct; $('asked').textContent = state.asked; }
+
+/* Timer */
+function startTimer(seconds, tickCallback, doneCallback) {
+  clearInterval(state.timer);
+  if (!seconds || seconds<=0) { tickCallback(null); return; }
+  state.timeLeft = seconds;
+  $('timeLeft').textContent = state.timeLeft;
+  state.timer = setInterval(()=>{
+    state.timeLeft--;
+    $('timeLeft').textContent = state.timeLeft;
+    if (tickCallback) tickCallback(state.timeLeft);
+    if (state.timeLeft <= 0) {
+      clearInterval(state.timer);
+      if (doneCallback) doneCallback();
+    }
+  }, 1000);
+}
+function stopTimer(){ clearInterval(state.timer); $('timeLeft').textContent='—' }
+
+/* Game flow */
+function startRound() {
+  state.name = $('playerName').value.trim();
+  state.difficulty = $('difficulty').value;
+  state.operation = $('operation').value;
+  state.qtime = Number($('qtime').value) || 0;
+  state.qcount = $('qcount').value;
+  state.score = 0; state.correct = 0; state.asked = 0;
+  updateScoreUI();
+  $('feedback').textContent = '';
+  show('quiz');
+  askNext();
+}
+
+function askNext() {
+  // Check if reached qcount
+  if (state.qcount !== 'unlimited' && state.asked >= Number(state.qcount)) {
+    endRound();
+    return;
+  }
+  state.currentQ = generateQuestion(state.difficulty, state.operation);
+  $('questionText').textContent = state.currentQ.text;
+  $('answerInput').value = '';
+  $('answerInput').focus();
+  state.asked++;
+  updateScoreUI();
+  // start timer if set
+  startTimer(state.qtime, ()=>{}, ()=>{ // timed out
+    $('feedback').textContent = 'Time up! The answer was: ' + state.currentQ.answer;
+    // no score for timeouts; continue after short pause
+    setTimeout(()=>{ $('feedback').textContent=''; askNext();}, 900);
+  });
+}
+
+function submitAnswer() {
+  if (!state.currentQ) return;
+  let val = $('answerInput').value.trim();
+  if (val === '') { $('feedback').textContent = 'Please type an answer.'; return; }
+  stopTimer();
+  // Accept decimal answers with small tolerance
+  let given = Number(val);
+  let correct = Number(state.currentQ.answer);
+  let ok = Math.abs(given - correct) < 0.0001;
+  if (ok) {
+    state.score += 10;
+    state.correct++;
+    $('feedback').textContent = 'Correct! +10';
+  } else {
+    $('feedback').textContent = `Wrong — correct answer: ${correct}`;
+  }
+  updateScoreUI();
+  // next after 700ms
+  setTimeout(()=>{ $('feedback').textContent=''; askNext(); }, 700);
+}
+
+function skipQuestion(){
+  stopTimer();
+  $('feedback').textContent = 'Skipped. The answer was: ' + state.currentQ.answer;
+  setTimeout(()=>{ $('feedback').textContent=''; askNext(); }, 500);
+}
+
+function endRound(){
+  stopTimer();
+  show('end');
+  $('finalScore').textContent = state.score;
+  $('finalCorrect').textContent = state.correct;
+  $('finalAsked').textContent = state.asked;
+}
+
+/* Leaderboard (localStorage) */
+const LB_KEY = 'quickMathLeaderboard_v1';
+function loadLeaderboard(){
+  let raw = localStorage.getItem(LB_KEY);
+  try { return raw ? JSON.parse(raw) : [] } catch(e){ return [] }
+}
+function saveLeaderboard(arr){ localStorage.setItem(LB_KEY, JSON.stringify(arr)) }
+function addToLeaderboard(name, score, correct, asked){
+  let arr = loadLeaderboard();
+  arr.push({name: name||'Anon', score, correct, asked, date: new Date().toISOString()});
+  // sort by score desc
+  arr.sort((a,b)=> b.score - a.score || b.correct - a.correct);
+  saveLeaderboard(arr);
+  return arr;
+}
+function showLeaderboardUI(){
+  let arr = loadLeaderboard();
+  let top = arr.slice(0,10);
+  let ol = $('lbList');
+  ol.innerHTML = '';
+  if (top.length === 0) ol.innerHTML = '<li class="small">No scores yet — play and save!</li>';
+  else top.forEach(item=>{
+    let d = new Date(item.date);
+    let li = document.createElement('li');
+    li.innerHTML = `<strong>${item.name}</strong> — ${item.score} pts (${item.correct}/${item.asked}) <div class="small">${d.toLocaleString()}</div>`;
+    ol.appendChild(li);
+  });
+  show('leaderboard');
+}
+
+/* Events */
+$('startBtn').addEventListener('click', startRound);
+$('submitAnswer').addEventListener('click', submitAnswer);
+$('answerInput').addEventListener('keypress', (e)=>{ if(e.key==='Enter') submitAnswer(); });
+$('skipBtn').addEventListener('click', skipQuestion);
+$('viewLb').addEventListener('click', showLeaderboardUI);
+$('backBtn').addEventListener('click', ()=> show('setup'));
+$('endNow').addEventListener('click', endRound);
+$('playAgain').addEventListener('click', ()=> { show('setup'); });
+$('clearLb').addEventListener('click', ()=>{ if(confirm('Clear leaderboard?')){ localStorage.removeItem(LB_KEY); showLeaderboardUI(); }});
+$('saveScore').addEventListener('click', ()=>{
+  addToLeaderboard(state.name || 'Anon', state.score, state.correct, state.asked);
+  $('afterSave').innerHTML = '<div class="small">Saved! <button onclick="showLeaderboardUI()" class="btn-ghost">View leaderboard</button></div>';
+});
+$('shareScore').addEventListener('click', ()=>{
+  let text = `${state.name||'I'} scored ${state.score} points (${state.correct}/${state.asked}) on Quick Math Quiz! Try: `;
+  if (navigator.share) {
+    navigator.share({title:'My Quiz Score', text, url: location.href});
+  } else {
+    navigator.clipboard.writeText(text + location.href).then(()=> alert('Score copied — paste to share!'));
+  }
+});
+
+/* PWA install prompt handling */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  $('installBtn').style.display = 'inline-block';
+  $('installBtn').addEventListener('click', async ()=>{
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    $('installBtn').style.display = 'none';
+  });
+});
+
+/* Register service worker */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{ /* ignore register errors on local file */ });
+}
+
+/* Start: show setup screen */
+show('setup');
+updateScoreUI();
+</script>
+</body>
+</html>
